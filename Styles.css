@@ -1,0 +1,283 @@
+/* ===== Reset & Layout ===== */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: visible !important;
+}
+
+/* ===== Override jsPsych centering ===== */
+.jspsych-content-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    position: static !important;
+}
+
+.jspsych-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    position: static !important;
+}
+
+.jspsych-display-element {
+    transform: none !important;
+    position: static !important;
+}
+
+#jspsych-target {
+    width: 100%;
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow: visible !important;
+    position: static !important;
+    transform-origin: top left;
+    z-index: 0;
+}
+
+/* ===== Next button — positioned via button_html in each trial ===== */
+.jspsych-btn-group {
+    all: unset !important;
+    z-index: 99999 !important;
+    pointer-events: auto !important;
+}
+
+.jspsych-btn {
+    font-size: 16px !important;
+    padding: 12px 32px !important;
+    font-weight: bold !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important;
+    background-color: #007bff !important;
+    color: #ffffff !important;
+    border: none !important;
+    cursor: pointer !important;
+    transition: background-color 0.2s ease !important;
+}
+
+.jspsych-btn.btn-locked {
+    background-color: #cccccc !important;
+    color: #666666 !important;
+    cursor: not-allowed !important;
+}
+
+.jspsych-btn.btn-ready {
+    background-color: #007bff !important;
+    color: #ffffff !important;
+    cursor: pointer !important;
+}
+
+.jspsych-btn.btn-ready:hover {
+    background-color: #0056b3 !important;
+}
+
+/* ===== Trial layout ===== */
+.trial-wrapper {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 16px;
+    gap: 20px;
+    overflow: hidden;
+}
+
+/* ===== Left: video panel ===== */
+.video-panel {
+    flex: 0 0 60%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.video-panel video {
+    width: 100%;
+    height: auto;
+    max-height: 85vh;
+    object-fit: contain;
+    background: #000;
+    border-radius: 6px;
+}
+
+.video-trial-label {
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 8px;
+    font-family: monospace;
+    letter-spacing: 0.08em;
+    flex-shrink: 0;
+}
+
+/* ===== Divider ===== */
+.panel-divider {
+    width: 1px;
+    background: #ddd;
+    margin: 16px 0;
+    flex-shrink: 0;
+}
+
+/* ===== Right: questions panel ===== */
+.questions-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 8px 16px 80px 16px;
+    overflow: hidden;
+    gap: 8px;
+}
+
+/* ===== Question blocks ===== */
+.question-block {
+    flex-shrink: 0;
+}
+
+.question-label {
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 8px;
+    color: #222;
+}
+
+/* ===== Emotion buttons ===== */
+.emotion-choice-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+}
+
+.emotion-choice-btn {
+    padding: 8px 10px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 13px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s ease;
+    color: #333;
+}
+
+.emotion-choice-btn:hover {
+    border-color: #007bff;
+    background: #e8f0fe;
+}
+
+.emotion-choice-btn.selected {
+    border-color: #007bff;
+    background: #e8f0fe;
+    color: #007bff;
+    font-weight: bold;
+}
+
+/* ===== Sliders ===== */
+.slider-wrapper {
+    margin-top: 2px;
+}
+
+.slider-anchors {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 4px;
+}
+
+input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: #ddd;
+    outline: none;
+    cursor: pointer;
+}
+
+input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #007bff;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    transition: transform 0.1s;
+}
+
+input[type=range]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+input[type=range]:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
+.slider-value-display {
+    text-align: center;
+    font-size: 13px;
+    font-family: monospace;
+    color: #007bff;
+    font-weight: bold;
+    margin-top: 2px;
+    min-height: 16px;
+}
+
+/* ===== Progress bar ===== */
+#progress-bar-container {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: #eee;
+    z-index: 10000;
+}
+
+#progress-bar {
+    height: 100%;
+    background: #007bff;
+    transition: width 0.4s ease;
+}
+
+#progress-label {
+    position: fixed;
+    top: 8px;
+    right: 16px;
+    font-size: 11px;
+    font-family: monospace;
+    color: #999;
+    z-index: 10000;
+    letter-spacing: 0.05em;
+}
+
+/* ===== Welcome / instructions / end screens ===== */
+.screen-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    padding: 48px;
+    box-sizing: border-box;
+    text-align: center;
+}
+
+.screen-center h1 {
+    font-size: 28px;
+    font-weight: 400;
+    margin-bottom: 16px;
+}
+
+.screen-center p {
+    font-size: 15px;
+    color: #555;
+    line-height: 1.7;
+    margin-bottom: 16px;
+    max-width: 600px;
+}
