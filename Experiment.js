@@ -1,10 +1,10 @@
 // ===== CONFIGURATION =====
 const TEST_MODE   = 0;           // 1 = test mode, 0 = production
 const VIDEO_FOLDER = 'Videos/';  // folder containing your video files
-const EMOTIONS    = ['Happy', 'Sad', 'Angry', 'Tired', 'Proud', 'Neutral'];
+const EMOTIONS    = ['Happy', 'Sad', 'Angry', 'Tired', 'Proud'];
 const VIDEO_DURATION_MS = 3000;  // minimum watch time before Next unlocks
 
-// ===== FIREBASE CONFIG — fill in your project details =====
+// ===== FIREBASE CONFIG =====
 const FIREBASE_CONFIG = {
     apiKey: "AIzaSyDr1Q-f5PG4bifxeSMmLlTghjB3jFos3uk",
     authDomain: "emosense-d75d4.firebaseapp.com",
@@ -13,48 +13,42 @@ const FIREBASE_CONFIG = {
     messagingSenderId: "206150435854",
     appId: "1:206150435854:web:ecf8da5328a02483f2e85f"
 };
-const FIREBASE_COLLECTION = 'trials'; // Firestore collection name
+const FIREBASE_COLLECTION = 'trials';
 
 // ===== SUBJECT ID =====
 const subjectId = Math.floor(1000 + Math.random() * 9000);
 
 // ===== AUTO ZOOM =====
-// Scale horizontally relative to 1920px baseline, exactly like the reference experiment.
-// The layout uses 100vh internally so height fills naturally after scaling.
 function applyZoom() {
     const target = document.getElementById('jspsych-target');
     if (!target) return;
-
     const width = window.screen.width;
     if (width === 1920) {
         target.style.transform = '';
         target.style.transformOrigin = '';
         return;
     }
-
     const zoom = 0.01 * Math.floor(100 * width / 1920);
     target.style.transform       = `scale(${zoom})`;
     target.style.transformOrigin = 'top left';
 }
-
 window.addEventListener('load',   applyZoom);
 window.addEventListener('resize', applyZoom);
 
-// ===== INJECT PROGRESS BAR =====
+// ===== PROGRESS BAR =====
 function injectProgressBar() {
     if (document.getElementById('progress-bar-container')) return;
     const container = document.createElement('div');
     container.id = 'progress-bar-container';
     container.innerHTML = `<div id="progress-bar" style="width:0%"></div>`;
     document.body.appendChild(container);
-
     const label = document.createElement('div');
     label.id = 'progress-label';
     document.body.appendChild(label);
 }
 
 function updateProgress(current, total) {
-    const bar = document.getElementById('progress-bar');
+    const bar   = document.getElementById('progress-bar');
     const label = document.getElementById('progress-label');
     if (bar)   bar.style.width = `${(current / total) * 100}%`;
     if (label) label.textContent = `${current} / ${total}`;
@@ -68,15 +62,11 @@ async function initFirebase() {
         const { initializeApp } = await import('https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js');
         const { getFirestore, collection, addDoc, serverTimestamp }
             = await import('https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js');
-
         const app = initializeApp(FIREBASE_CONFIG);
         db = getFirestore(app);
-
-        // Store helpers on db object for later use
-        db._collection       = collection;
-        db._addDoc           = addDoc;
-        db._serverTimestamp  = serverTimestamp;
-
+        db._collection      = collection;
+        db._addDoc          = addDoc;
+        db._serverTimestamp = serverTimestamp;
         console.log('Firebase initialised');
     } catch (e) {
         console.error('Firebase init failed:', e);
@@ -97,9 +87,6 @@ async function saveToFirebase(collection, data) {
 }
 
 // ===== LOAD VIDEO LIST =====
-// Expects a JSON file at the root: video-list.json
-// Format: ["happy_01.mp4", "sad_02.mp4", ...]
-// If you don't have a JSON file, replace this with a hardcoded array.
 let videoFiles = [];
 
 fetch('video-list.json')
@@ -123,7 +110,6 @@ function initializeExperiment() {
         }
     });
 
-    // Shuffle videos
     const shuffledVideos = jsPsych.randomization.shuffle([...videoFiles]);
     const totalTrials    = shuffledVideos.length;
 
@@ -135,12 +121,13 @@ function initializeExperiment() {
         stimulus: `
             <div class="screen-center">
                 <h1>Puppet Emotion Study</h1>
-                <p>Thank you for participating.</p>
+                <p>Thank you for participating in this study.</p>
                 <p>
-                    You will watch <strong>${totalTrials} short video clips</strong> of puppet characters.
-                    For each video, you will answer three questions about the emotion being expressed.
-                    Each video is 3 seconds long and will loop automatically.
+                    You will watch <strong>${totalTrials} short video clips</strong> of puppet characters
+                    and answer a few questions about each one.
+                    At the end of the video task, there will also be a short questionnaire.
                 </p>
+                <p>The whole session should take approximately 20–30 minutes.</p>
                 <p>Your participant ID is: <strong>${subjectId}</strong></p>
             </div>
         `,
@@ -213,16 +200,34 @@ function initializeExperiment() {
         stimulus: `
             <div class="screen-center">
                 <h1>Instructions</h1>
-                <p>For each video, you will be asked to:</p>
                 <p>
-                    <strong>1. Choose an emotion</strong> — select which of the six emotions the puppet is expressing: Happy, Sad, Angry, Tired, Proud, or Neutral.<br><br>
-                    <strong>2. Rate clarity</strong> — how clearly does the puppet express that emotion? (1 = not at all clearly, 100 = extremely clearly). This question is skipped if you select Neutral.<br><br>
-                    <strong>3. Rate valence</strong> — how positive or negative does the expression feel? (1 = very negative, 100 = very positive)
+                    In this task you will watch short video clips of puppet characters performing
+                    different movements. For each video, please answer the following three questions:
                 </p>
                 <p>
-                    All three questions appear on screen at the same time as the video.
+                    <strong>1. Choose an emotion</strong> — select the emotion that is most clearly
+                    expressed by the puppet. Choose from: Happy, Sad, Angry, Tired, or Proud.
+                    Pick the option that best matches what you see, even if the expression is subtle
+                    or ambiguous.
+                </p>
+                <p>
+                    <strong>2. Rate clarity</strong> — how clearly does the puppet express the emotion
+                    you selected? Use the slider to indicate your answer
+                    (1 = not at all clearly, 100 = extremely clearly).
+                </p>
+                <p>
+                    <strong>3. Rate valence</strong> — how positive or negative does the puppet's
+                    expression feel overall?
+                    (1 = very negative, 100 = very positive).
+                </p>
+                <p>
+                    The video will loop continuously while you answer.
                     The <strong>Next</strong> button will unlock once you have watched the full clip
                     and answered all three questions.
+                </p>
+                <p style="color:#555;">
+                    After the videos, you will complete a short questionnaire.
+                    Please answer all questions as honestly as possible.
                 </p>
             </div>
         `,
@@ -230,12 +235,30 @@ function initializeExperiment() {
         button_html: `<div style="position:fixed; bottom:30px; left:50%; transform:translateX(-50%);"><button class="jspsych-btn" style="padding:12px 32px; font-size:16px; font-weight:bold; border-radius:8px; border:none; background:#007bff; color:#fff; box-shadow:0 4px 6px rgba(0,0,0,0.2); cursor:pointer;">Begin</button></div>`
     };
 
-    // ===== TRIALS =====
+    // ===== PRELOAD =====
+    const preload = {
+        type: jsPsychPreload,
+        video: shuffledVideos.map(f => `${VIDEO_FOLDER}${f}`),
+        show_progress_bar: true,
+        message: `
+            <div class="screen-center">
+                <h2>Loading videos...</h2>
+                <p>Please wait while the videos are prepared. This may take a moment depending on your connection.</p>
+            </div>
+        `,
+        error_message: '<p>Some videos could not be loaded. The experiment will continue anyway.</p>',
+        continue_after_error: true,
+        show_detailed_errors: TEST_MODE === 1
+    };
+
+    // ===== TIMELINE =====
     const timeline = [];
     timeline.push(welcome);
     timeline.push(demographics);
+    timeline.push(preload);
     timeline.push(instructions);
 
+    // ===== TRIALS =====
     shuffledVideos.forEach((filename, index) => {
         const trialNum = index + 1;
 
@@ -264,7 +287,7 @@ function initializeExperiment() {
 
                             <!-- Q1: forced choice -->
                             <div class="question-block">
-                                <div class="question-label">Which emotion does this puppet express?</div>
+                                <div class="question-label">Which emotion does this puppet most clearly express?</div>
                                 <div class="emotion-choice-grid">
                                     ${EMOTIONS.map(e => `
                                         <button class="emotion-choice-btn" data-emotion="${e}"
@@ -275,7 +298,7 @@ function initializeExperiment() {
                                 </div>
                             </div>
 
-                            <!-- Q2: clarity slider (muted when Neutral selected) -->
+                            <!-- Q2: clarity slider -->
                             <div class="question-block" id="clarity-block-${trialNum}">
                                 <div class="question-label">
                                     How clearly does it express
@@ -290,9 +313,6 @@ function initializeExperiment() {
                                         min="1" max="100" value="50"
                                         oninput="window._onSlider('clarity', this.value, ${trialNum})">
                                     <div class="slider-value-display" id="clarity-val-${trialNum}">—</div>
-                                </div>
-                                <div id="clarity-muted-msg-${trialNum}" style="display:none; color:#aaa; font-size:13px; font-style:italic; margin-top:6px;">
-                                    Not applicable for Neutral
                                 </div>
                             </div>
 
@@ -319,10 +339,10 @@ function initializeExperiment() {
             },
 
             data: {
-                task:       'trial',
+                task:         'trial',
                 trial_number: trialNum,
-                subject_id: subjectId,
-                video:      filename
+                subject_id:   subjectId,
+                video:        filename
             },
 
             button_html: `<div style="position:fixed; bottom:30px; left:50%; transform:translateX(-50%);"><button class="jspsych-btn" style="padding:12px 32px; font-size:16px; font-weight:bold; border-radius:8px; border:none; box-shadow:0 4px 6px rgba(0,0,0,0.2);">Next →</button></div>`,
@@ -330,40 +350,44 @@ function initializeExperiment() {
             on_load: function() {
                 updateProgress(index, totalTrials);
 
-                // Per-trial state
+                // Random starting positions for sliders
+                const clarityStart = Math.floor(Math.random() * 100) + 1;
+                const valenceStart = Math.floor(Math.random() * 100) + 1;
+
                 const state = {
                     watched:        false,
                     emotion:        null,
-                    clarity:        50,
-                    valence:        50,
+                    clarity:        clarityStart,
+                    valence:        valenceStart,
                     clarityTouched: false,
                     valenceTouched: false,
                     startTime:      Date.now()
                 };
                 window[`_trialState_${trialNum}`] = state;
 
+                // Apply random starting positions to slider elements
+                const claritySliderEl = document.getElementById(`clarity-slider-${trialNum}`);
+                const valenceSliderEl = document.getElementById(`valence-slider-${trialNum}`);
+                if (claritySliderEl) claritySliderEl.value = clarityStart;
+                if (valenceSliderEl) valenceSliderEl.value = valenceStart;
+
                 function checkReady() {
-                    const isNeutral = state.emotion === 'Neutral';
                     const ready = state.watched &&
                                   state.emotion !== null &&
-                                  (isNeutral || state.clarityTouched) &&
+                                  state.clarityTouched &&
                                   state.valenceTouched;
                     const btn = document.querySelector('.jspsych-btn');
-                    if (btn) {
-                        btn.classList.toggle('btn-locked', !ready);
-                    }
+                    if (btn) btn.classList.toggle('btn-locked', !ready);
                 }
 
-                // Unlock after one full video play
+                // Unlock after minimum watch time
                 const watchTimer = setTimeout(() => {
                     state.watched = true;
                     checkReady();
                 }, VIDEO_DURATION_MS);
-
-                // Store timer ref so it can be cleared if needed
                 window[`_watchTimer_${trialNum}`] = watchTimer;
 
-                // Expose slider handler
+                // Slider handler
                 window._onSlider = function(type, value, t) {
                     if (t !== trialNum) return;
                     const v = parseInt(value);
@@ -382,7 +406,7 @@ function initializeExperiment() {
                     checkReady();
                 };
 
-                // Expose emotion selector
+                // Emotion selector
                 window._selectEmotion = function(emotion, t) {
                     if (t !== trialNum) return;
                     const s = window[`_trialState_${t}`];
@@ -394,34 +418,6 @@ function initializeExperiment() {
 
                     const lbl = document.getElementById(`chosen-label-${t}`);
                     if (lbl) lbl.textContent = `"${emotion}"`;
-
-                    // Mute clarity slider when Neutral is selected
-                    const clarityBlock  = document.getElementById(`clarity-block-${t}`);
-                    const claritySlider = document.getElementById(`clarity-slider-${t}`);
-                    const clarityVal    = document.getElementById(`clarity-val-${t}`);
-                    const clarityMsg    = document.getElementById(`clarity-muted-msg-${t}`);
-
-                    if (emotion === 'Neutral') {
-                        clarityBlock.style.opacity  = '0.35';
-                        claritySlider.disabled      = true;
-                        claritySlider.style.cursor  = 'not-allowed';
-                        clarityVal.textContent      = '—';
-                        clarityMsg.style.display    = 'block';
-                        s.clarity                   = null;
-                        s.clarityTouched            = false;
-                    } else {
-                        clarityBlock.style.opacity  = '1';
-                        claritySlider.disabled      = false;
-                        claritySlider.style.cursor  = 'pointer';
-                        clarityMsg.style.display    = 'none';
-                        // Reset slider to midpoint if coming back from Neutral
-                        if (s.clarity === null) {
-                            claritySlider.value    = 50;
-                            clarityVal.textContent = '—';
-                            s.clarity              = 50;
-                            s.clarityTouched       = false;
-                        }
-                    }
 
                     checkReady();
                 };
@@ -436,7 +432,7 @@ function initializeExperiment() {
                             e.stopImmediatePropagation();
                             alert('Please watch the full video and answer all three questions before continuing.');
                         }
-                    }, true); // capture phase so it fires before jsPsych
+                    }, true);
                 }
 
                 // Test mode skip
@@ -458,18 +454,18 @@ function initializeExperiment() {
 
             on_finish: async function(data) {
                 const state = window[`_trialState_${trialNum}`];
-                data.emotion   = state.emotion;
-                data.clarity   = state.clarity;
-                data.valence   = state.valence;
-                data.rt_ms     = Date.now() - state.startTime;
+                data.emotion = state.emotion;
+                data.clarity = state.clarity;
+                data.valence = state.valence;
+                data.rt_ms   = Date.now() - state.startTime;
 
                 await saveToFirebase(FIREBASE_COLLECTION, {
-                    trial:     trialNum,
-                    video:     filename,
-                    emotion:   state.emotion,
-                    clarity:   state.clarity,
-                    valence:   state.valence,
-                    rt_ms:     data.rt_ms
+                    trial:   trialNum,
+                    video:   filename,
+                    emotion: state.emotion,
+                    clarity: state.clarity,
+                    valence: state.valence,
+                    rt_ms:   data.rt_ms
                 });
             }
         };
@@ -477,10 +473,25 @@ function initializeExperiment() {
         timeline.push(trial);
     });
 
-    // ===== POST-EXPERIMENT SURVEY: MAIA-2 =====
-    // Multidimensional Assessment of Interoceptive Awareness, Version 2
-    // © 2018 University of California San Francisco
+    // ===== TRANSITION TO QUESTIONNAIRE =====
+    const transitionScreen = {
+        type: jsPsychHtmlButtonResponse,
+        stimulus: `
+            <div class="screen-center">
+                <h1>Well done!</h1>
+                <p>You have finished rating all ${totalTrials} video clips.</p>
+                <p>
+                    There is now a short questionnaire. Please read each statement carefully
+                    and answer as honestly as you can.
+                </p>
+                <p>Click <strong>Continue</strong> when you are ready.</p>
+            </div>
+        `,
+        choices: ['Continue'],
+        button_html: `<div style="position:fixed; bottom:30px; left:50%; transform:translateX(-50%);"><button class="jspsych-btn" style="padding:12px 32px; font-size:16px; font-weight:bold; border-radius:8px; border:none; background:#007bff; color:#fff; box-shadow:0 4px 6px rgba(0,0,0,0.2); cursor:pointer;">Continue</button></div>`
+    };
 
+    // ===== MAIA-2 SURVEY =====
     const maiaItems = [
         { name: 'maia_01', prompt: '1. When I am tense I notice where the tension is located in my body.' },
         { name: 'maia_02', prompt: '2. I notice when I am uncomfortable in my body.' },
@@ -521,7 +532,6 @@ function initializeExperiment() {
         { name: 'maia_37', prompt: '37. I trust my body sensations.' }
     ];
 
-    // Split into pages of 10 items each for readability
     const ITEMS_PER_PAGE = 10;
     const maiaHeader = {
         type: 'html',
@@ -548,7 +558,6 @@ function initializeExperiment() {
         };
     }
 
-    // Build pages: first page has header + first 10 items, rest are 10 items each
     const maiaPages = [];
     for (let i = 0; i < maiaItems.length; i += ITEMS_PER_PAGE) {
         const pageItems = maiaItems.slice(i, i + ITEMS_PER_PAGE).map(makeMaiaItem);
@@ -577,12 +586,14 @@ function initializeExperiment() {
         stimulus: `
             <div class="screen-center">
                 <h1>Thank you!</h1>
-                <p>You have completed all ${totalTrials} videos. Your responses have been saved.</p>
+                <p>You have completed the study. Your responses have been saved.</p>
                 <p style="font-size:13px; color:#aaa;">Participant ID: ${subjectId}</p>
             </div>
         `,
         choices: ['Close']
     };
+
+    timeline.push(transitionScreen);
     timeline.push(postSurvey);
     timeline.push(endScreen);
 
