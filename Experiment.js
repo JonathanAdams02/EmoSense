@@ -127,7 +127,7 @@ function initializeExperiment() {
                     and answer a few questions about each one.
                     At the end of the video task, there will also be a short questionnaire.
                 </p>
-                <p>The whole session should take approximately 20–30 minutes.</p>
+                <p>The whole session should take approximately 45–60 minutes.</p>
                 <p>Your participant ID is: <strong>${subjectId}</strong></p>
             </div>
         `,
