@@ -1,5 +1,5 @@
 // ===== CONFIGURATION =====
-const TEST_MODE   = 0;           // 1 = test mode, 0 = production
+const TEST_MODE   = 1;           // 1 = test mode, 0 = production
 const VIDEO_FOLDER = 'Videos/';  // folder containing your video files
 const EMOTIONS    = ['Happy', 'Sad', 'Angry', 'Tired', 'Proud'];
 const VIDEO_DURATION_MS = 3000;  // minimum watch time before Next unlocks
@@ -178,6 +178,12 @@ function initializeExperiment() {
                         'Other'
                     ],
                     required: true
+                },
+                {
+                     type: 'text',
+                     name: 'sona_id',
+                     prompt: 'What is your SONA ID?',
+                    required: true
                 }
             ]
         ],
@@ -186,6 +192,7 @@ function initializeExperiment() {
         on_finish: function(data) {
             saveToFirebase('demographics', {
                 task:            'demographics',
+                sona_id:         data.response.sona_id,
                 age:             data.response.age,
                 gender:          data.response.gender,
                 native_language: data.response.native_language,
