@@ -180,9 +180,9 @@ function initializeExperiment() {
                     required: true
                 },
                 {
-                     type: 'text',
-                     name: 'sona_id',
-                     prompt: 'What is your SONA ID?',
+                    type: 'text',
+                    name: 'sona_id',
+                    prompt: 'What is your SONA ID?',
                     required: true
                 }
             ]
@@ -386,16 +386,10 @@ function initializeExperiment() {
                     const btn = document.querySelector('.jspsych-btn');
                     if (btn) btn.classList.toggle('btn-locked', !ready);
                 }
+
+                // ===== VIDEO LOADING WITH RETRY =====
                 const video = document.getElementById(`stim-video-${trialNum}`);
-                console.log('Video element found:', video);
-                console.log('Video src:', video ? video.querySelector('source')?.src : 'no video');
-                console.log('Video readyState on load:', video ? video.readyState : 'no video');
                 if (video) {
-                    video.addEventListener('stalled',  () => console.log('VIDEO STALLED'));
-                    video.addEventListener('waiting',  () => console.log('VIDEO WAITING'));
-                    video.addEventListener('error',    () => console.log('VIDEO ERROR', video.error));
-                    video.addEventListener('canplay',  () => console.log('VIDEO CANPLAY'));
-                    video.addEventListener('playing',  () => console.log('VIDEO PLAYING'));
                     let retryCount = 0;
                     const maxRetries = 3;
                     let loadTimeout = null;
@@ -407,16 +401,19 @@ function initializeExperiment() {
                     function tryLoad() {
                         clearTimeout(loadTimeout);
                         video.load();
-                        video.play().catch(() => { video.muted = true; video.play(); });
-                        // If not playing within 4 seconds, treat as failed
+                        // Wait for canplay before attempting play — avoids AbortError
+                        video.addEventListener('canplay', function onCanPlay() {
+                            video.removeEventListener('canplay', onCanPlay);
+                            video.play().catch(() => {});
+                        });
+                        // If not ready within 6 seconds, treat as failed
                         loadTimeout = setTimeout(() => {
-                            if (video.readyState < 2) { // HAVE_CURRENT_DATA = 2
-                                handleFail();
-                            }
-                        }, 4000);
+                            if (video.readyState < 2) handleFail();
+                        }, 6000);
                     }
 
                     function handleFail() {
+                        clearTimeout(loadTimeout);
                         if (retryCount < maxRetries) {
                             retryCount++;
                             statusMsg.textContent = `Video not loading, retrying... (${retryCount}/${maxRetries})`;
@@ -428,30 +425,31 @@ function initializeExperiment() {
                         }
                     }
 
-                    // Catch explicit errors
+                    // Catch explicit errors on video and source elements
                     video.addEventListener('error', handleFail);
                     const source = video.querySelector('source');
                     if (source) source.addEventListener('error', handleFail);
 
-                    // Clear timeout when playing successfully
+                    // Clear timeout and status when playing successfully
                     video.addEventListener('playing', function() {
                         clearTimeout(loadTimeout);
                         statusMsg.textContent = '';
                     });
 
-                    // Start the initial load check
+                    // Start initial load check after 6 seconds
                     loadTimeout = setTimeout(() => {
                         if (video.readyState < 2) handleFail();
-                    }, 4000);
+                    }, 6000);
                 }
-                // Unlock after minimum watch time
+
+                // ===== WATCH TIMER =====
                 const watchTimer = setTimeout(() => {
                     state.watched = true;
                     checkReady();
                 }, VIDEO_DURATION_MS);
                 window[`_watchTimer_${trialNum}`] = watchTimer;
 
-                // Slider handler
+                // ===== SLIDER HANDLER =====
                 window._onSlider = function(type, value, t) {
                     if (t !== trialNum) return;
                     const v = parseInt(value);
@@ -470,7 +468,7 @@ function initializeExperiment() {
                     checkReady();
                 };
 
-                // Emotion selector
+                // ===== EMOTION SELECTOR =====
                 window._selectEmotion = function(emotion, t) {
                     if (t !== trialNum) return;
                     const s = window[`_trialState_${t}`];
@@ -486,7 +484,7 @@ function initializeExperiment() {
                     checkReady();
                 };
 
-                // Lock Next button until all conditions met
+                // ===== LOCK NEXT BUTTON =====
                 const btn = document.querySelector('.jspsych-btn');
                 if (btn) btn.classList.add('btn-locked');
                 if (btn) {
@@ -499,7 +497,7 @@ function initializeExperiment() {
                     }, true);
                 }
 
-                // Test mode skip
+                // ===== TEST MODE SKIP =====
                 if (TEST_MODE) {
                     const skipBtn = document.getElementById(`skip-btn-${trialNum}`);
                     if (skipBtn) {
