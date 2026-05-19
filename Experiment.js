@@ -386,7 +386,37 @@ function initializeExperiment() {
                     const btn = document.querySelector('.jspsych-btn');
                     if (btn) btn.classList.toggle('btn-locked', !ready);
                 }
+                const video = document.getElementById(`stim-video-${trialNum}`);
+                if (video) {
+                    let retryCount = 0;
+                    const maxRetries = 3;
 
+                    const statusMsg = document.createElement('div');
+                    statusMsg.style.cssText = 'color:#cc0000; font-size:12px; text-align:center; margin-top:6px; min-height:16px;';
+                    video.parentNode.insertBefore(statusMsg, video.nextSibling);
+
+                    function tryLoad() {
+                        video.load();
+                        video.play().catch(() => { video.muted = true; video.play(); });
+                    }
+
+                    video.addEventListener('error', function() {
+                        if (retryCount < maxRetries) {
+                            retryCount++;
+                            statusMsg.textContent = `Video not loading, retrying... (${retryCount}/${maxRetries})`;
+                            setTimeout(tryLoad, 1500);
+                        } else {
+                            statusMsg.textContent = '⚠️ Video could not be loaded. Please click Next and continue.';
+                            // Unlock the watch timer immediately so they can still proceed
+                            state.watched = true;
+                            checkReady();
+                        }
+                    });
+
+                    video.addEventListener('playing', function() {
+                        statusMsg.textContent = '';
+                    });
+                }
                 // Unlock after minimum watch time
                 const watchTimer = setTimeout(() => {
                     state.watched = true;
