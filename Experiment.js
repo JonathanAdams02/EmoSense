@@ -1,5 +1,5 @@
 // ===== CONFIGURATION =====
-const TEST_MODE   = 1;           // 1 = test mode, 0 = production
+const TEST_MODE   = 0;           // 1 = test mode, 0 = production
 const VIDEO_FOLDER = 'Videos/';  // folder containing your video files
 const EMOTIONS    = ['Happy', 'Sad', 'Angry', 'Tired', 'Proud'];
 const VIDEO_DURATION_MS = 3000;  // minimum watch time before Next unlocks
