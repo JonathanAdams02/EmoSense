@@ -387,7 +387,15 @@ function initializeExperiment() {
                     if (btn) btn.classList.toggle('btn-locked', !ready);
                 }
                 const video = document.getElementById(`stim-video-${trialNum}`);
+                console.log('Video element found:', video);
+                console.log('Video src:', video ? video.querySelector('source')?.src : 'no video');
+                console.log('Video readyState on load:', video ? video.readyState : 'no video');
                 if (video) {
+                    video.addEventListener('stalled',  () => console.log('VIDEO STALLED'));
+                    video.addEventListener('waiting',  () => console.log('VIDEO WAITING'));
+                    video.addEventListener('error',    () => console.log('VIDEO ERROR', video.error));
+                    video.addEventListener('canplay',  () => console.log('VIDEO CANPLAY'));
+                    video.addEventListener('playing',  () => console.log('VIDEO PLAYING'));
                     let retryCount = 0;
                     const maxRetries = 3;
                     let loadTimeout = null;
