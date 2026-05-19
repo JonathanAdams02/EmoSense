@@ -390,32 +390,51 @@ function initializeExperiment() {
                 if (video) {
                     let retryCount = 0;
                     const maxRetries = 3;
+                    let loadTimeout = null;
 
                     const statusMsg = document.createElement('div');
                     statusMsg.style.cssText = 'color:#cc0000; font-size:12px; text-align:center; margin-top:6px; min-height:16px;';
                     video.parentNode.insertBefore(statusMsg, video.nextSibling);
 
                     function tryLoad() {
+                        clearTimeout(loadTimeout);
                         video.load();
                         video.play().catch(() => { video.muted = true; video.play(); });
+                        // If not playing within 4 seconds, treat as failed
+                        loadTimeout = setTimeout(() => {
+                            if (video.readyState < 2) { // HAVE_CURRENT_DATA = 2
+                                handleFail();
+                            }
+                        }, 4000);
                     }
 
-                    video.addEventListener('error', function() {
+                    function handleFail() {
                         if (retryCount < maxRetries) {
                             retryCount++;
                             statusMsg.textContent = `Video not loading, retrying... (${retryCount}/${maxRetries})`;
                             setTimeout(tryLoad, 1500);
                         } else {
                             statusMsg.textContent = '⚠️ Video could not be loaded. Please click Next and continue.';
-                            // Unlock the watch timer immediately so they can still proceed
                             state.watched = true;
                             checkReady();
                         }
-                    });
+                    }
 
+                    // Catch explicit errors
+                    video.addEventListener('error', handleFail);
+                    const source = video.querySelector('source');
+                    if (source) source.addEventListener('error', handleFail);
+
+                    // Clear timeout when playing successfully
                     video.addEventListener('playing', function() {
+                        clearTimeout(loadTimeout);
                         statusMsg.textContent = '';
                     });
+
+                    // Start the initial load check
+                    loadTimeout = setTimeout(() => {
+                        if (video.readyState < 2) handleFail();
+                    }, 4000);
                 }
                 // Unlock after minimum watch time
                 const watchTimer = setTimeout(() => {
