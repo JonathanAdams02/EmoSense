@@ -2,7 +2,7 @@
 const TEST_MODE   = 0;           // 1 = test mode, 0 = production
 const VIDEO_FOLDER = 'https://emosenseworker.jonathanadams02.workers.dev/';
 const EMOTIONS    = ['Happy', 'Sad', 'Angry', 'Tired', 'Proud'];
-const VIDEO_DURATION_MS = 3000;  // minimum watch time before Next unlocks
+const VIDEO_MAX_MS = 10000;      // maximum video duration before auto-stop
 
 // ===== FIREBASE CONFIG =====
 const FIREBASE_CONFIG = {
@@ -209,28 +209,28 @@ function initializeExperiment() {
                 <h1>Instructions</h1>
                 <p>
                     In this task you will watch short video clips of puppet characters performing
-                    different movements. For each video, please answer the following three questions:
+                    different movements.
                 </p>
                 <p>
-                    <strong>1. Choose an emotion</strong> — select the emotion that is most clearly
-                    expressed by the puppet. Choose from: Happy, Sad, Angry, Tired, or Proud.
-                    Pick the option that best matches what you see, even if the expression is subtle
-                    or ambiguous.
+                    <strong>Step 1 — Do you detect an emotional expression?</strong><br>
+                    While the video plays, decide whether you can detect an emotional expression
+                    in the puppet's movement, or whether it moves in a neutral way.
+                    Click <em>Emotional</em> or <em>Neutral</em> as soon as you have made your
+                    decision. The video will stop the moment you respond, or automatically after
+                    10 seconds if you have not yet responded.
                 </p>
                 <p>
-                    <strong>2. Rate clarity</strong> — how clearly does the puppet express the emotion
-                    you selected? Use the slider to indicate your answer
-                    (1 = not at all clearly, 100 = extremely clearly).
+                    <strong>Step 2 — Which emotion?</strong><br>
+                    If you detected an emotional expression, you will then be asked to identify
+                    which of the following five emotions the puppet expressed:
+                </p>
+                <p style="font-size:17px; font-weight:bold; letter-spacing:0.03em;">
+                    Happy &nbsp;&middot;&nbsp; Sad &nbsp;&middot;&nbsp; Angry &nbsp;&middot;&nbsp; Tired &nbsp;&middot;&nbsp; Proud
                 </p>
                 <p>
-                    <strong>3. Rate valence</strong> — how positive or negative does the puppet's
-                    expression feel overall?
-                    (1 = very negative, 100 = very positive).
-                </p>
-                <p>
-                    The video will loop continuously while you answer.
-                    The <strong>Next</strong> button will unlock once you have watched the full clip
-                    and answered all three questions.
+                    Choose the option that best matches what you saw, even if the expression was
+                    subtle or ambiguous. If you chose <em>Neutral</em> in Step 1, no second
+                    question will appear.
                 </p>
                 <p style="color:#555;">
                     After the videos, you will complete a short questionnaire.
@@ -269,270 +269,167 @@ function initializeExperiment() {
     shuffledVideos.forEach((filename, index) => {
         const trialNum = index + 1;
 
-        const trial = {
+        // ----- STAGE 1: Emotional or Neutral? -----
+        const stage1 = {
             type: jsPsychHtmlButtonResponse,
-            choices: ['Next →'],
+            choices: ['Emotional', 'Neutral'],
             stimulus: function() {
                 return `
                     ${TEST_MODE ? `<div style="position:fixed;top:60px;right:10px;background:red;color:#fff;padding:8px 14px;font-weight:bold;z-index:10000;border-radius:5px;">TEST MODE</div>` : ''}
 
-                    <div class="trial-wrapper">
-
-                        <!-- LEFT: video -->
-                        <div class="video-panel">
-                            ${TEST_MODE ? `<div class="video-trial-label">${filename}</div>` : ''}
-                            <div class="video-trial-label">Video ${trialNum} of ${totalTrials}</div>
-                            <video id="stim-video-${trialNum}" autoplay loop muted playsinline>
-                                <source src="${VIDEO_FOLDER}${filename}" type="video/mp4">
-                            </video>
-                        </div>
-
-                        <div class="panel-divider"></div>
-
-                        <!-- RIGHT: questions -->
-                        <div class="questions-panel">
-
-                            <!-- Q1: forced choice -->
-                            <div class="question-block">
-                                <div class="question-label">Which emotion does this puppet most clearly express?</div>
-                                <div class="emotion-choice-grid">
-                                    ${EMOTIONS.map(e => `
-                                        <button class="emotion-choice-btn" data-emotion="${e}"
-                                            onclick="window._selectEmotion('${e}', ${trialNum})">
-                                            ${e}
-                                        </button>
-                                    `).join('')}
-                                </div>
-                            </div>
-
-                            <!-- Q2: clarity slider -->
-                            <div class="question-block" id="clarity-block-${trialNum}">
-                                <div class="question-label">
-                                    How clearly does it express
-                                    <span id="chosen-label-${trialNum}">that emotion</span>?
-                                </div>
-                                <div class="slider-wrapper">
-                                    <div class="slider-anchors">
-                                        <span>Not at all clearly</span>
-                                        <span>Extremely clearly</span>
-                                    </div>
-                                    <input type="range" id="clarity-slider-${trialNum}"
-                                        min="1" max="100" value="50"
-                                        oninput="window._onSlider('clarity', this.value, ${trialNum})">
-                                    <div class="slider-value-display" id="clarity-val-${trialNum}">—</div>
-                                </div>
-                            </div>
-
-                            <!-- Q3: valence slider -->
-                            <div class="question-block">
-                                <div class="question-label">How positive or negative does this expression feel?</div>
-                                <div class="slider-wrapper">
-                                    <div class="slider-anchors">
-                                        <span>Very negative</span>
-                                        <span>Very positive</span>
-                                    </div>
-                                    <input type="range" id="valence-slider-${trialNum}"
-                                        min="1" max="100" value="50"
-                                        oninput="window._onSlider('valence', this.value, ${trialNum})">
-                                    <div class="slider-value-display" id="valence-val-${trialNum}">—</div>
-                                </div>
-                            </div>
-
-                        </div>
+                    <div class="trial-wrapper-stage1">
+                        ${TEST_MODE ? `<div class="video-trial-label">${filename}</div>` : ''}
+                        <div class="video-trial-label">Video ${trialNum} of ${totalTrials}</div>
+                        <video id="stim-video-${trialNum}" autoplay loop muted playsinline
+                            style="max-height:85vh; max-width:95vw; width:100%; height:auto; display:block; margin:0 auto 40px auto;">
+                            <source src="${VIDEO_FOLDER}${filename}" type="video/mp4">
+                        </video>
                     </div>
 
-                    ${TEST_MODE ? `<button id="skip-btn-${trialNum}" style="position:fixed;bottom:80px;right:20px;padding:10px 20px;font-size:14px;font-weight:bold;background:#ff9800;color:#fff;border:none;border-radius:6px;cursor:pointer;z-index:9999;">SKIP →</button>` : ''}
+                    ${TEST_MODE ? `<button id="skip-btn-s1-${trialNum}" style="position:fixed;bottom:80px;right:20px;padding:10px 20px;font-size:14px;font-weight:bold;background:#ff9800;color:#fff;border:none;border-radius:6px;cursor:pointer;z-index:9999;">SKIP →</button>` : ''}
                 `;
             },
 
+            button_html: '<button class="jspsych-btn" style="padding:14px 40px; font-size:17px; font-weight:bold; border-radius:8px; border:none; background:#007bff; color:#fff; box-shadow:0 4px 6px rgba(0,0,0,0.2); cursor:pointer; margin:0 10px;">%choice%</button>',
+
             data: {
-                task:         'trial',
+                task:         'stage1',
                 trial_number: trialNum,
                 subject_id:   subjectId,
                 video:        filename
             },
 
-            button_html: `<div style="position:fixed; bottom:30px; left:50%; transform:translateX(-50%);"><button class="jspsych-btn" style="padding:12px 32px; font-size:16px; font-weight:bold; border-radius:8px; border:none; box-shadow:0 4px 6px rgba(0,0,0,0.2);">Next →</button></div>`,
-
             on_load: function() {
                 updateProgress(index, totalTrials);
 
-                // Random starting positions for sliders
-                const clarityStart = Math.floor(Math.random() * 100) + 1;
-                const valenceStart = Math.floor(Math.random() * 100) + 1;
+                // ===== AUTO-ADVANCE AFTER 10s =====
+                // Manual setTimeout so on_finish always runs and sets
+                // window[_stage1_N] before conditional_function is evaluated.
+                const autoTimer = setTimeout(() => {
+                    // Stop video immediately
+                    const vid = document.getElementById(`stim-video-${trialNum}`);
+                    if (vid) { vid.pause(); vid.src = ''; }
+                    // 1.5s blank ITI before advancing (Jastorff et al. 2015)
+                    setTimeout(() => {
+                        jsPsych.finishTrial({ response: null });
+                    }, 1500);
+                }, VIDEO_MAX_MS);
+                window[`_autoTimer_${trialNum}`] = autoTimer;
 
-                const state = {
-                    watched:        false,
-                    emotion:        null,
-                    clarity:        clarityStart,
-                    valence:        valenceStart,
-                    clarityTouched: false,
-                    valenceTouched: false,
-                    startTime:      Date.now()
-                };
-                window[`_trialState_${trialNum}`] = state;
-
-                // Apply random starting positions to slider elements
-                const claritySliderEl = document.getElementById(`clarity-slider-${trialNum}`);
-                const valenceSliderEl = document.getElementById(`valence-slider-${trialNum}`);
-                if (claritySliderEl) claritySliderEl.value = clarityStart;
-                if (valenceSliderEl) valenceSliderEl.value = valenceStart;
-
-                function checkReady() {
-                    const ready = state.watched &&
-                                  state.emotion !== null &&
-                                  state.clarityTouched &&
-                                  state.valenceTouched;
-                    const btn = document.querySelector('.jspsych-btn');
-                    if (btn) btn.classList.toggle('btn-locked', !ready);
-                }
-
-                // ===== VIDEO LOADING WITH RETRY =====
-                const video = document.getElementById(`stim-video-${trialNum}`);
-                if (video) {
-                    let retryCount = 0;
-                    const maxRetries = 3;
-                    let loadTimeout = null;
-
-                    const statusMsg = document.createElement('div');
-                    statusMsg.style.cssText = 'color:#cc0000; font-size:12px; text-align:center; margin-top:6px; min-height:16px;';
-                    video.parentNode.insertBefore(statusMsg, video.nextSibling);
-
-                    function tryLoad() {
-                        clearTimeout(loadTimeout);
-                        video.load();
-                        // Wait for canplay before attempting play — avoids AbortError
-                        video.addEventListener('canplay', function onCanPlay() {
-                            video.removeEventListener('canplay', onCanPlay);
-                            video.play().catch(() => {});
-                        });
-                        // If not ready within 6 seconds, treat as failed
-                        loadTimeout = setTimeout(() => {
-                            if (video.readyState < 2) handleFail();
-                        }, 6000);
-                    }
-
-                    function handleFail() {
-                        clearTimeout(loadTimeout);
-                        if (retryCount < maxRetries) {
-                            retryCount++;
-                            statusMsg.textContent = `Video not loading, retrying... (${retryCount}/${maxRetries})`;
-                            setTimeout(tryLoad, 1500);
-                        } else {
-                            statusMsg.textContent = '⚠️ Video could not be loaded. Please click Next and continue.';
-                            state.watched = true;
-                            checkReady();
-                        }
-                    }
-
-                    // Catch explicit errors on video and source elements
-                    video.addEventListener('error', handleFail);
-                    const source = video.querySelector('source');
-                    if (source) source.addEventListener('error', handleFail);
-
-                    // Clear timeout and status when playing successfully
-                    video.addEventListener('playing', function() {
-                        clearTimeout(loadTimeout);
-                        statusMsg.textContent = '';
-                    });
-
-                    // Start initial load check after 6 seconds
-                    loadTimeout = setTimeout(() => {
-                        if (video.readyState < 2) handleFail();
-                    }, 6000);
-                }
-
-                // ===== WATCH TIMER =====
-                const watchTimer = setTimeout(() => {
-                    state.watched = true;
-                    checkReady();
-                }, VIDEO_DURATION_MS);
-                window[`_watchTimer_${trialNum}`] = watchTimer;
-
-                // ===== SLIDER HANDLER =====
-                window._onSlider = function(type, value, t) {
-                    if (t !== trialNum) return;
-                    const v = parseInt(value);
-                    const s = window[`_trialState_${t}`];
-                    if (type === 'clarity') {
-                        s.clarity        = v;
-                        s.clarityTouched = true;
-                        const el = document.getElementById(`clarity-val-${t}`);
-                        if (el) el.textContent = v;
-                    } else {
-                        s.valence        = v;
-                        s.valenceTouched = true;
-                        const el = document.getElementById(`valence-val-${t}`);
-                        if (el) el.textContent = v;
-                    }
-                    checkReady();
-                };
-
-                // ===== EMOTION SELECTOR =====
-                window._selectEmotion = function(emotion, t) {
-                    if (t !== trialNum) return;
-                    const s = window[`_trialState_${t}`];
-                    s.emotion = emotion;
-
-                    document.querySelectorAll('.emotion-choice-btn').forEach(b => {
-                        b.classList.toggle('selected', b.dataset.emotion === emotion);
-                    });
-
-                    const lbl = document.getElementById(`chosen-label-${t}`);
-                    if (lbl) lbl.textContent = `"${emotion}"`;
-
-                    checkReady();
-                };
-
-                // ===== LOCK NEXT BUTTON =====
-                const btn = document.querySelector('.jspsych-btn');
-                if (btn) btn.classList.add('btn-locked');
-                if (btn) {
-                    btn.addEventListener('click', function(e) {
-                        if (btn.classList.contains('btn-locked')) {
-                            e.preventDefault();
-                            e.stopImmediatePropagation();
-                            alert('Please watch the full video and answer all three questions before continuing.');
-                        }
-                    }, true);
-                }
-
-                // ===== TEST MODE SKIP =====
+                                // ===== TEST MODE SKIP =====
                 if (TEST_MODE) {
-                    const skipBtn = document.getElementById(`skip-btn-${trialNum}`);
+                    const skipBtn = document.getElementById(`skip-btn-s1-${trialNum}`);
                     if (skipBtn) {
                         skipBtn.addEventListener('click', () => {
-                            state.watched        = true;
-                            state.emotion        = EMOTIONS[0];
-                            state.clarity        = 50;
-                            state.valence        = 50;
-                            state.clarityTouched = true;
-                            state.valenceTouched = true;
-                            jsPsych.finishTrial({ skipped: true });
+                            clearTimeout(window[`_autoTimer_${trialNum}`]);
+                            jsPsych.finishTrial({ response: 0, skipped: true });
                         });
                     }
                 }
             },
 
-            on_finish: async function(data) {
-                const state = window[`_trialState_${trialNum}`];
-                data.emotion = state.emotion;
-                data.clarity = state.clarity;
-                data.valence = state.valence;
-                data.rt_ms   = Date.now() - state.startTime;
+            on_finish: function(data) {
+                // Cancel the auto-advance timer if user responded before 10s
+                clearTimeout(window[`_autoTimer_${trialNum}`]);
 
-                await saveToFirebase(FIREBASE_COLLECTION, {
-                    trial:   trialNum,
-                    video:   filename,
-                    emotion: state.emotion,
-                    clarity: state.clarity,
-                    valence: state.valence,
-                    rt_ms:   data.rt_ms
-                });
+                // Stop the video immediately on response
+                const video = document.getElementById(`stim-video-${trialNum}`);
+                if (video) { video.pause(); video.src = ''; }
+
+                // response: 0 = Emotional, 1 = Neutral, null = timeout
+                data.stage1_response = (data.response === 0) ? 'emotional'
+                                     : (data.response === 1) ? 'neutral'
+                                     : 'timeout';
+                data.stage1_rt_ms = data.rt;
+
+                window[`_stage1_${trialNum}`]    = data.stage1_response;
+                window[`_stage1_rt_${trialNum}`] = data.stage1_rt_ms;
             }
         };
 
-        timeline.push(trial);
+        // ----- STAGE 2: Which emotion? -----
+        // Only shown when stage1 = 'emotional'.
+        // Uses a proper conditional timeline wrapper — conditional_function
+        // on a standalone trial object is silently ignored by jsPsych.
+        const stage2 = {
+            timeline: [
+                {
+                    type: jsPsychHtmlButtonResponse,
+                    choices: EMOTIONS,
+
+                    stimulus: `
+                        <div class="screen-center">
+                            <div class="question-label" style="font-size:20px; margin-bottom:28px;">
+                                Which emotion did the puppet express?
+                            </div>
+                        </div>
+                    `,
+
+                    button_html: `
+                        <div style="position:fixed; bottom:360px; left:50%; transform:translateX(-50%); display:flex; gap:14px; flex-wrap:wrap; justify-content:center;">
+                            ${EMOTIONS.map(e => `<button class="jspsych-btn emotion-afc-btn" style="padding:14px 30px; font-size:16px; font-weight:bold; border-radius:8px; border:none; background:#007bff; color:#fff; box-shadow:0 4px 6px rgba(0,0,0,0.2); cursor:pointer;">${e}</button>`).join('')}
+                        </div>
+                    `,
+
+                    data: {
+                        task:         'stage2',
+                        trial_number: trialNum,
+                        subject_id:   subjectId,
+                        video:        filename
+                    },
+
+                    on_finish: async function(data) {
+                        const emotionChosen = EMOTIONS[data.response];
+                        data.stage2_emotion = emotionChosen;
+
+                        await saveToFirebase(FIREBASE_COLLECTION, {
+                            trial:           trialNum,
+                            video:           filename,
+                            stage1_response: window[`_stage1_${trialNum}`],
+                            stage1_rt_ms:    window[`_stage1_rt_${trialNum}`],
+                            stage2_emotion:  emotionChosen,
+                            stage2_rt_ms:    data.rt
+                        });
+                    }
+                }
+            ],
+            conditional_function: function() {
+                return window[`_stage1_${trialNum}`] === 'emotional';
+            }
+        };
+
+        // ----- NEUTRAL / TIMEOUT SAVE -----
+        // Fires for 'neutral' and 'timeout' responses; saves to Firebase.
+        // Uses jsPsychHtmlButtonResponse with trial_duration:0 — no extra
+        // plugin needed beyond what is already in index.html.
+        const neutralSave = {
+            timeline: [
+                {
+                    type: jsPsychHtmlButtonResponse,
+                    stimulus: '',
+                    choices: [],
+                    trial_duration: 0,
+                    on_finish: async function() {
+                        await saveToFirebase(FIREBASE_COLLECTION, {
+                            trial:           trialNum,
+                            video:           filename,
+                            stage1_response: window[`_stage1_${trialNum}`],
+                            stage1_rt_ms:    window[`_stage1_rt_${trialNum}`],
+                            stage2_emotion:  null,
+                            stage2_rt_ms:    null
+                        });
+                    }
+                }
+            ],
+            conditional_function: function() {
+                const s1 = window[`_stage1_${trialNum}`];
+                return s1 === 'neutral' || s1 === 'timeout';
+            }
+        };
+
+        timeline.push(stage1);
+        timeline.push(stage2);
+        timeline.push(neutralSave);
     });
 
     // ===== TRANSITION TO QUESTIONNAIRE =====
@@ -648,11 +545,11 @@ function initializeExperiment() {
         stimulus: `
             <div class="screen-center">
                 <h1>Thank you!</h1>
-                <p>You have completed the study. Your responses have been saved.</p>
+                <p>You have completed the study. Your responses have been saved. You can now close this window.</p>
                 <p style="font-size:13px; color:#aaa;">Participant ID: ${subjectId}</p>
             </div>
         `,
-        choices: ['Close']
+        choices: []
     };
 
     timeline.push(transitionScreen);
