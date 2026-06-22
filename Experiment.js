@@ -276,7 +276,6 @@ function initializeExperiment() {
             stimulus: function() {
                 return `
                     ${TEST_MODE ? `<div style="position:fixed;top:60px;right:10px;background:red;color:#fff;padding:8px 14px;font-weight:bold;z-index:10000;border-radius:5px;">TEST MODE</div>` : ''}
-
                     <div class="trial-wrapper-stage1">
                         ${TEST_MODE ? `<div class="video-trial-label">${filename}</div>` : ''}
                         <div class="video-trial-label">Video ${trialNum} of ${totalTrials}</div>
@@ -285,12 +284,12 @@ function initializeExperiment() {
                             <source src="${VIDEO_FOLDER}${filename}" type="video/mp4">
                         </video>
                     </div>
-
                     ${TEST_MODE ? `<button id="skip-btn-s1-${trialNum}" style="position:fixed;bottom:80px;right:20px;padding:10px 20px;font-size:14px;font-weight:bold;background:#ff9800;color:#fff;border:none;border-radius:6px;cursor:pointer;z-index:9999;">SKIP →</button>` : ''}
                 `;
             },
 
-            button_html: '<button class="jspsych-btn" style="padding:14px 40px; font-size:17px; font-weight:bold; border-radius:8px; border:none; background:#007bff; color:#fff; box-shadow:0 4px 6px rgba(0,0,0,0.2); cursor:pointer; margin:0 10px;">%choice%</button>',
+            // Let jsPsych render one button per choice — %choice% is replaced per button
+            button_html: '<button class="jspsych-btn stage1-btn" style="padding:14px 40px; font-size:17px; font-weight:bold; border-radius:8px; border:none; background:#007bff; color:#fff; box-shadow:0 4px 6px rgba(0,0,0,0.2); cursor:pointer; margin:0 10px;">%choice%</button>',
 
             data: {
                 task:         'stage1',
@@ -302,21 +301,15 @@ function initializeExperiment() {
             on_load: function() {
                 updateProgress(index, totalTrials);
 
-                // ===== AUTO-ADVANCE AFTER 10s =====
-                // Manual setTimeout so on_finish always runs and sets
-                // window[_stage1_N] before conditional_function is evaluated.
                 const autoTimer = setTimeout(() => {
-                    // Stop video immediately
                     const vid = document.getElementById(`stim-video-${trialNum}`);
                     if (vid) { vid.pause(); vid.src = ''; }
-                    // 1.5s blank ITI before advancing (Jastorff et al. 2015)
                     setTimeout(() => {
                         jsPsych.finishTrial({ response: null });
                     }, 1500);
                 }, VIDEO_MAX_MS);
                 window[`_autoTimer_${trialNum}`] = autoTimer;
 
-                                // ===== TEST MODE SKIP =====
                 if (TEST_MODE) {
                     const skipBtn = document.getElementById(`skip-btn-s1-${trialNum}`);
                     if (skipBtn) {
@@ -329,10 +322,8 @@ function initializeExperiment() {
             },
 
             on_finish: function(data) {
-                // Cancel the auto-advance timer if user responded before 10s
                 clearTimeout(window[`_autoTimer_${trialNum}`]);
 
-                // Stop the video immediately on response
                 const video = document.getElementById(`stim-video-${trialNum}`);
                 if (video) { video.pause(); video.src = ''; }
 
@@ -348,9 +339,9 @@ function initializeExperiment() {
         };
 
         // ----- STAGE 2: Which emotion? -----
-        // Only shown when stage1 = 'emotional'.
-        // Uses a proper conditional timeline wrapper — conditional_function
-        // on a standalone trial object is silently ignored by jsPsych.
+        // FIX: use %choice% so jsPsych renders one button per choice and maps
+        // data.response correctly (0=Happy, 1=Sad, 2=Angry, 3=Tired, 4=Proud).
+        // Positioning is handled via CSS on #jspsych-html-button-response-btngroup.
         const stage2 = {
             timeline: [
                 {
@@ -358,18 +349,16 @@ function initializeExperiment() {
                     choices: EMOTIONS,
 
                     stimulus: `
-                        <div class="screen-center">
+                        <div class="screen-center" style="height:auto; padding-top:80px;">
                             <div class="question-label" style="font-size:20px; margin-bottom:28px;">
                                 Which emotion did the puppet express?
                             </div>
                         </div>
                     `,
 
-                    button_html: `
-                        <div style="position:fixed; bottom:360px; left:50%; transform:translateX(-50%); display:flex; gap:14px; flex-wrap:wrap; justify-content:center;">
-                            ${EMOTIONS.map(e => `<button class="jspsych-btn emotion-afc-btn" style="padding:14px 30px; font-size:16px; font-weight:bold; border-radius:8px; border:none; background:#007bff; color:#fff; box-shadow:0 4px 6px rgba(0,0,0,0.2); cursor:pointer;">${e}</button>`).join('')}
-                        </div>
-                    `,
+                    // One button per choice — jsPsych replaces %choice% individually,
+                    // so data.response = index of the clicked button (0–4).
+                    button_html: '<button class="jspsych-btn emotion-afc-btn" style="padding:14px 30px; font-size:16px; font-weight:bold; border-radius:8px; border:none; background:#007bff; color:#fff; box-shadow:0 4px 6px rgba(0,0,0,0.2); cursor:pointer; margin:6px;">%choice%</button>',
 
                     data: {
                         task:         'stage2',
@@ -379,6 +368,7 @@ function initializeExperiment() {
                     },
 
                     on_finish: async function(data) {
+                        // data.response is now the correct index (0=Happy … 4=Proud)
                         const emotionChosen = EMOTIONS[data.response];
                         data.stage2_emotion = emotionChosen;
 
@@ -399,9 +389,6 @@ function initializeExperiment() {
         };
 
         // ----- NEUTRAL / TIMEOUT SAVE -----
-        // Fires for 'neutral' and 'timeout' responses; saves to Firebase.
-        // Uses jsPsychHtmlButtonResponse with trial_duration:0 — no extra
-        // plugin needed beyond what is already in index.html.
         const neutralSave = {
             timeline: [
                 {
